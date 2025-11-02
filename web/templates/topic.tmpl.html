@@ -1,0 +1,15 @@
+{{ define "title" }}Тема — Learny{{ end }}
+{{ template "base.tmpl.html" . }}
+{{ define "content" }}
+<h1>Тема: {{ .Topic }}</h1>
+<table>
+  <tr><th>Вопрос</th><th>Когда</th><th>Статус</th></tr>
+  {{ range .Detail }}
+  <tr>
+    <td>#{{ .QID }}</td>
+    <td>{{ .When }}</td>
+    <td>{{ if .Correct }}✅{{ else }}❌{{ end }}</td>
+  </tr>
+  {{ end }}
+</table>
+{{ end }}

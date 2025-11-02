@@ -1,0 +1,32 @@
+{{ define "title" }}Админ: результаты — Learny{{ end }}
+{{ template "base.tmpl.html" . }}
+{{ define "content" }}
+<h1>Результаты по курсу</h1>
+
+<form method="get" class="card" style="display:flex; gap:8px; align-items:center">
+  <label>Курс
+    <select name="course_id">
+      {{ range .Courses }}
+        <option value="{{ .ID }}" {{ if eq $.Selected .ID }}selected{{ end }}>#{{ .ID }} — {{ .Title }}</option>
+      {{ end }}
+    </select>
+  </label>
+  <button type="submit">Показать</button>
+</form>
+
+<p><a class="btn" href="/admin/results/export?course_id={{ .Selected }}">Экспорт CSV</a></p>
+
+<table>
+  <tr><th>ID попытки</th><th>Пользователь</th><th>Квиз</th><th>Завершено</th><th>Балл</th><th></th></tr>
+  {{ range .Attempts }}
+  <tr>
+    <td>{{ .ID }}</td>
+    <td>{{ .UserEmail }}</td>
+    <td>{{ .QuizTitle }}</td>
+    <td>{{ if .FinishedAt }}{{ .FinishedAt }}{{ else }}—{{ end }}</td>
+    <td>{{ if .Score }}{{ printf "%.0f" .Score }}{{ else }}—{{ end }}</td>
+    <td><a href="/admin/attempt?id={{ .ID }}">детали</a></td>
+  </tr>
+  {{ end }}
+</table>
+{{ end }}

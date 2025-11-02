@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{{ block "title" . }}Learny{{ end }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css?v=navfix-4" />
+</head>
+<body>
+<header class="site-header">
+  <div class="nav">
+    <a class="brand" href="/">Learny</a>
+
+    <nav class="nav-main">
+      {{ if .Authed }}
+        <a href="/courses">Курсы</a>
+        <a href="/topics">Темы</a>
+        <a href="/recommendations">Рекомендации</a>
+      {{ end }}
+    </nav>
+
+    <nav class="nav-right">
+      {{ if .Authed }}
+        <a href="/settings/password">Пароль</a>
+
+        {{ if or .IsTeacher .IsAdmin }}
+        <div class="dropdown">
+          <button class="btn-ghost btn" type="button">Админ</button>
+          <div class="dropdown-menu">
+            <a href="/admin/courses">Курсы</a>
+            <a href="/admin/quizzes">Квизы</a>
+            <a href="/admin/results">Результаты</a>
+            <a href="/admin/users">Пользователи</a>
+            <a href="/admin/questions">Вопросы</a>
+
+            <div class="dropdown-divider"></div>
+            <a href="/admin/questions/upload">Импорт CSV</a>
+            <a href="/admin/questions/import-json">Импорт JSON</a>
+
+            <div class="dropdown-divider"></div>
+            <a href="/admin/logs">Логи</a>
+            <a href="/admin/results/export">Экспорт CSV</a>
+          </div>
+        </div>
+        {{ end }}
+
+        <a class="btn" href="/logout">Выйти</a>
+      {{ else }}
+        <a class="btn-ghost btn" href="/login">Войти</a>
+        <a class="btn" href="/register">Регистрация</a>
+      {{ end }}
+    </nav>
+  </div>
+</header>
+
+<main class="container">
+  {{ block "content" . }}{{ end }}
+</main>
+
+<footer class="site-footer">
+  <div class="container small muted">© Learny</div>
+</footer>
+</body>
+</html>

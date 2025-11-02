@@ -1,0 +1,39 @@
+{{ define "title" }}Админ: курсы — Learny{{ end }}
+{{ template "base.tmpl.html" . }}
+{{ define "content" }}
+<h1>Курсы</h1>
+
+<h2>Список</h2>
+<ul class="list">
+  {{ range .Courses }}
+  <li class="card">
+    <strong>#{{ .ID }} — {{ .Title }}</strong><br>
+    <small class="muted">{{ .Description }}</small>
+    <div class="actions" style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap">
+      <form method="post">
+        <input type="hidden" name="action" value="update">
+        <input type="hidden" name="id" value="{{ .ID }}">
+        <input name="title" placeholder="Новое название">
+        <input name="description" placeholder="Новое описание">
+        <button type="submit">Сохранить</button>
+      </form>
+      <form method="post" onsubmit="return confirm('Удалить курс #{{ .ID }}?')">
+        <input type="hidden" name="action" value="delete">
+        <input type="hidden" name="id" value="{{ .ID }}">
+        <button type="submit">Удалить</button>
+      </form>
+      <a class="btn" href="/admin/quizzes?course_id={{ .ID }}">Квизы</a>
+      <a class="btn" href="/admin/results?course_id={{ .ID }}">Результаты</a>
+    </div>
+  </li>
+  {{ end }}
+</ul>
+
+<h2>Создать курс</h2>
+<form method="post" class="card">
+  <input type="hidden" name="action" value="create">
+  <label>Название <input type="text" name="title" required></label>
+  <label>Описание <input type="text" name="description"></label>
+  <button type="submit">Создать</button>
+</form>
+{{ end }}

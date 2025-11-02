@@ -1,0 +1,33 @@
+{{ define "title" }}Логи — Learny{{ end }}
+{{ template "base.tmpl.html" . }}
+{{ define "content" }}
+  <h1>Логи по пользователю</h1>
+
+  {{ if not .UserID }}
+    <div class="card">
+      <form method="get" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <label class="small muted">Пользователь:</label>
+        <select name="user_id">
+          {{ range .Users }}
+            <option value="{{ .ID }}">{{ .Email }}</option>
+          {{ end }}
+        </select>
+        <button class="btn">Показать</button>
+      </form>
+    </div>
+  {{ else }}
+    <p class="muted">Итого: {{ .Summary.Total }} записей.</p>
+    <table class="table">
+      <thead><tr><th>Время</th><th>Действие</th><th>Детали</th></tr></thead>
+      <tbody>
+        {{ range .Rows }}
+          <tr>
+            <td>{{ .At }}</td>
+            <td>{{ .Action }}</td>
+            <td class="small">{{ .Meta }}</td>
+          </tr>
+        {{ end }}
+      </tbody>
+    </table>
+  {{ end }}
+{{ end }}

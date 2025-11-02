@@ -1,0 +1,14 @@
+{{ define "title" }}Регистрация — Learny{{ end }}
+{{ template "base.tmpl.html" . }}
+{{ define "content" }}
+<h1>Регистрация</h1>
+{{ if .Error }}
+  <div class="card" style="border-color:#3f1d20;background:#2a1315;color:#ffc0c5">{{ .Error }}</div>
+{{ end }}
+<form method="post" class="card" style="display:grid;gap:12px;max-width:420px">
+  <label>Email <input type="email" name="email" required></label>
+  <label>Пароль (мин. 8) <input type="password" name="password" minlength="8" required></label>
+  <button class="btn" type="submit">Создать аккаунт</button>
+</form>
+<p class="muted" style="margin-top:10px">Уже зарегистрированы? <a href="/login">Войти</a></p>
+{{ end }}

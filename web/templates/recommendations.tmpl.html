@@ -1,0 +1,26 @@
+{{ define "title" }}Рекомендации — Learny{{ end }}
+{{ template "base.tmpl.html" . }}
+{{ define "content" }}
+<h1>Рекомендации</h1>
+{{ if not .Rows }}
+  <div class="empty">Пока нет данных. Пройдите хотя бы один тест, чтобы появились рекомендации.</div>
+{{ else }}
+  <div class="grid">
+    {{ range .Rows }}
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <strong style="font-size:18px">{{ .Topic }}</strong>
+        {{ if eq .Percent 100 }}<span class="badge ok">100%</span>
+        {{ else if gt .Percent 0 }}<span class="badge warn">{{ .Percent }}%</span>
+        {{ else }}<span class="badge">0%</span>{{ end }}
+      </div>
+      <div class="space" style="height:8px"></div>
+      <div class="progress"><span style="width: {{ .Percent }}%"></span></div>
+      <div class="small muted" style="margin-top:8px">Верных: {{ .Correct }} из {{ .Total }}</div>
+      <div class="space" style="height:10px"></div>
+      <a class="btn btn-ghost" href="/topic?name={{ .Topic }}">Открыть профиль темы</a>
+    </div>
+    {{ end }}
+  </div>
+{{ end }}
+{{ end }}

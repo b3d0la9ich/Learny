@@ -1,0 +1,28 @@
+{{ define "title" }}Импорт вопросов (CSV) — Learny{{ end }}
+{{ template "base.tmpl.html" . }}
+{{ define "content" }}
+<h1>Импорт вопросов (CSV)</h1>
+
+{{ if .OK }}<p class="ok">Импортировано записей: {{ .Count }} в курс #{{ .Selected }}</p>{{ end }}
+
+<form method="post" enctype="multipart/form-data" class="card">
+  <label>Курс
+    <select name="course_id" required>
+      {{ range .Courses }}
+        <option value="{{ .ID }}" {{ if eq $.Selected .ID }}selected{{ end }}>#{{ .ID }} — {{ .Title }}</option>
+      {{ end }}
+    </select>
+  </label>
+  <label>CSV-файл <input type="file" name="file" accept=".csv" required></label>
+  <button type="submit">Загрузить</button>
+</form>
+
+<p class="muted">Формат (разделитель <code>;</code>):</p>
+<pre class="card">topic;q_type;question_text;choices(comma);correct(comma or value);difficulty
+logic;single;(TRUE AND FALSE) OR TRUE?;TRUE,FALSE;0;2
+logic;multiple;Выберите тавтологии;A∨¬A, A∧¬A, ¬¬A;0,2;3
+algebra;numeric;det([[1,2],[3,4]]);; -2 ;3
+algebra;text;Сколько корней у x^2=0?;;1,один;2
+</pre>
+<p><a class="btn" href="/admin/questions">Перейти к списку вопросов</a></p>
+{{ end }}

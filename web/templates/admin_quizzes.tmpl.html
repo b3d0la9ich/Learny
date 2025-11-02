@@ -1,0 +1,43 @@
+{{ define "title" }}Админ: квизы — Learny{{ end }}
+{{ template "base.tmpl.html" . }}
+{{ define "content" }}
+<h1>Квизы по курсу</h1>
+
+<form method="get" class="card" style="display:flex; gap:8px; align-items:center">
+  <label>Курс
+    <select name="course_id">
+      {{ range .Courses }}
+        <option value="{{ .ID }}" {{ if eq $.Selected .ID }}selected{{ end }}>#{{ .ID }} — {{ .Title }}</option>
+      {{ end }}
+    </select>
+  </label>
+  <button type="submit">Показать</button>
+</form>
+
+<h2>Список</h2>
+<ul class="list">
+  {{ range .Quizzes }}
+  <li class="card">
+    <strong>#{{ .ID }} — {{ .Title }}</strong>
+    <pre class="card" style="margin-top:8px">{{ printf "%s" .Rules }}</pre>
+    <form method="post" onsubmit="return confirm('Удалить квиз #{{ .ID }}?')" style="margin-top:8px">
+      <input type="hidden" name="action" value="delete">
+      <input type="hidden" name="quiz_id" value="{{ .ID }}">
+      <input type="hidden" name="course_id" value="{{ $.Selected }}">
+      <button type="submit">Удалить</button>
+    </form>
+  </li>
+  {{ end }}
+</ul>
+
+<h2>Создать квиз</h2>
+<form method="post" class="card">
+  <input type="hidden" name="action" value="create">
+  <input type="hidden" name="course_id" value="{{ .Selected }}">
+  <label>Название <input type="text" name="title" required></label>
+  <label>Правила (JSON)
+    <textarea name="rules_json" rows="6" placeholder='{"count":10,"by_topics":["logic"],"time_limit_sec":300,"max_attempts":3,"retake_cooldown_sec":3600}' required></textarea>
+  </label>
+  <button type="submit">Создать</button>
+</form>
+{{ end }}

@@ -1,0 +1,24 @@
+{{ define "title" }}Импорт вопросов (JSON) — Learny{{ end }}
+{{ template "base.tmpl.html" . }}
+{{ define "content" }}
+<h1>Импорт вопросов (JSON)</h1>
+
+{{ if .OK }}<p class="ok">Импортировано записей: {{ .Count }} в курс #{{ .Selected }}</p>{{ end }}
+
+<form method="post" enctype="multipart/form-data" class="card">
+  <label>Курс
+    <select name="course_id" required>
+      {{ range .Courses }}
+        <option value="{{ .ID }}" {{ if eq $.Selected .ID }}selected{{ end }}>#{{ .ID }} — {{ .Title }}</option>
+      {{ end }}
+    </select>
+  </label>
+  <label>JSON-файл <input type="file" name="file" accept=".json"></label>
+  <label>или вставьте JSON</label>
+  <textarea name="json" rows="10" placeholder='[
+  {"topic":"logic","q_type":"single","difficulty":2,"payload":{"text":"(T∧F)∨T?","choices":["TRUE","FALSE"],"correct":[0]}},
+  {"topic":"algebra","q_type":"numeric","payload":{"text":"det([[1,2],[3,4]])","correct_value":-2}}
+]'></textarea>
+  <button type="submit">Импортировать</button>
+</form>
+{{ end }}

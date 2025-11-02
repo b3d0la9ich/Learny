@@ -1,0 +1,4 @@
+FROM postgres:16
+WORKDIR /migrations
+COPY migrations /migrations
+CMD ["bash", "-lc", "psql \"$DATABASE_URL\" -f /migrations/001_init.sql && psql \"$DATABASE_URL\" -f /migrations/002_attempt_overtime.sql && psql \"$DATABASE_URL\" -f /migrations/003_indexes_attempts.sql && psql \"$DATABASE_URL\" -f /migrations/004_seed_admin.sql"]

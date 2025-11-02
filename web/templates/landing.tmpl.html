@@ -1,0 +1,69 @@
+{{ define "title" }}Learny — обучающая и тестирующая система{{ end }}
+{{ template "base.tmpl.html" . }}
+{{ define "content" }}
+
+<!-- HERO -->
+<section class="card" style="padding:28px;display:grid;gap:14px;max-width:980px">
+  <h1 style="font-size:34px;margin:0 0 6px">
+    Учитесь, тренируйтесь и проверяйте знания с гибкой структурой курсов и квизов
+  </h1>
+  <p class="muted" style="margin:0">
+    Создавайте курсы с модулями, запускайте тесты с тайм-лимитом и ограничением попыток,
+    импортируйте вопросы из CSV/JSON, анализируйте результаты и слабые темы.
+  </p>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px">
+    <a class="btn" href="/register">Начать бесплатно</a>
+    <a class="btn-ghost btn" href="/login">У меня уже есть аккаунт</a>
+    <a class="btn-ghost btn" href="/courses">Посмотреть курсы</a>
+  </div>
+</section>
+
+<div class="space" style="height:20px"></div>
+
+<!-- ВОЗМОЖНОСТИ -->
+<section class="grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr))">
+  <div class="card">
+    <h2 style="margin:0 0 8px">Гибкая структура</h2>
+    <p class="muted">Курсы → квизы → вопросы (single/multiple/число/текст). Сложность, темы, теги.</p>
+  </div>
+  <div class="card">
+    <h2 style="margin:0 0 8px">Ограничения и таймер</h2>
+    <p class="muted">Время на попытку, пауза между пересдачами, максимум попыток, рандомизация вопросов.</p>
+  </div>
+  <div class="card">
+    <h2 style="margin:0 0 8px">Импорт CSV/JSON</h2>
+    <p class="muted">Массовая загрузка банка вопросов. Поддержка нескольких правильных ответов.</p>
+  </div>
+  <div class="card">
+    <h2 style="margin:0 0 8px">Аналитика</h2>
+    <p class="muted">Результаты попыток, длительность, перерасход времени, «слабые» темы и рекомендации.</p>
+  </div>
+  <div class="card">
+    <h2 style="margin:0 0 8px">Роли</h2>
+    <p class="muted">Администратор, преподаватель, студент. Управление пользователями, курсами и квизами.</p>
+  </div>
+  <div class="card">
+    <h2 style="margin:0 0 8px">Экспорт</h2>
+    <p class="muted">Выгрузка результатов в CSV для отчётности и последующего анализа.</p>
+  </div>
+</section>
+
+<div class="space" style="height:20px"></div>
+
+<!-- КАК ЭТО РАБОТАЕТ -->
+<section class="card" style="padding:22px;display:grid;gap:10px">
+  <h2 style="margin:0">Как начать</h2>
+  <ol class="muted" style="margin:0 0 6px 18px">
+    <li>Зарегистрируйтесь или войдите в аккаунт.</li>
+    <li>Откройте «Курсы» и запустите доступный квиз — или создайте свой (для преподавателя/админа).</li>
+    <li>Импортируйте вопросы (CSV/JSON) или добавьте вручную.</li>
+    <li>Настройте правила квиза: тайм-лимит, попытки, пауза между пересдачами.</li>
+    <li>Анализируйте результаты и переходите к разделу «Темы»/«Рекомендации» для точечной подготовки.</li>
+  </ol>
+  <div style="display:flex;gap:12px;flex-wrap:wrap">
+    <a class="btn" href="/register">Создать аккаунт</a>
+    <a class="btn-ghost btn" href="/courses">Перейти к курсам</a>
+  </div>
+</section>
+
+{{ end }}

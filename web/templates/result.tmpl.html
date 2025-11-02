@@ -1,0 +1,8 @@
+{{ define "title" }}Результат — Learny{{ end }}
+{{ template "base.tmpl.html" . }}
+{{ define "content" }}
+<h1>Результат</h1>
+<p>Номер попытки: <strong>#{{ .AttemptID }}</strong></p>
+<p>Баллы: <strong>{{ printf "%.0f" .Score }}</strong></p>
+<p><a class="btn" href="/courses">К курсам</a></p>
+{{ end }}

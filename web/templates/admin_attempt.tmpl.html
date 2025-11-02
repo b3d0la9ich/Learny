@@ -1,0 +1,25 @@
+{{ define "title" }}Детали попытки — Learny{{ end }}
+{{ template "base.tmpl.html" . }}
+{{ define "content" }}
+<h1>Попытка #{{ .Meta.ID }}</h1>
+<p>Пользователь: <strong>{{ .Meta.UserEmail }}</strong></p>
+<p>Квиз: <strong>{{ .Meta.QuizTitle }}</strong></p>
+<p>Начато: {{ .Meta.StartedAt }} | Завершено: {{ if .Meta.FinishedAt }}{{ .Meta.FinishedAt }}{{ else }}—{{ end }}</p>
+<p>Балл: {{ if .Meta.Score }}{{ printf "%.0f" .Meta.Score }}{{ else }}—{{ end }}</p>
+<p>Длительность: {{ if .Meta.DurationSec }}{{ .Meta.DurationSec }} с{{ else }}—{{ end }} | Овертайм: {{ if .Meta.Overtime }}Да{{ else }}Нет{{ end }}</p>
+
+<table>
+  <tr><th>#</th><th>Тема</th><th>Тип</th><th>Вопрос</th><th>Ответ пользователя</th><th>Правильный</th><th>Статус</th></tr>
+  {{ range $i, $r := .Rows }}
+  <tr>
+    <td>{{ $r.Idx }}</td>
+    <td>{{ $r.Topic }}</td>
+    <td>{{ $r.QType }}</td>
+    <td>{{ $r.Text }}</td>
+    <td>{{ $r.UserAnswer }}</td>
+    <td>{{ $r.Correct }}</td>
+    <td>{{ if $r.IsCorrect }}✅{{ else }}❌{{ end }}</td>
+  </tr>
+  {{ end }}
+</table>
+{{ end }}

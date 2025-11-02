@@ -1,0 +1,25 @@
+{{ define "title" }}Правка вопроса — Learny{{ end }}
+{{ template "base.tmpl.html" . }}
+{{ define "content" }}
+  <h1>Правка вопроса #{{ .Q.ID }}</h1>
+
+  <form class="card" method="post" style="display:grid;gap:12px;max-width:800px">
+    <input type="hidden" name="id" value="{{ .Q.ID }}">
+    <label>Тема
+      <input type="text" name="topic" value="{{ .Q.Topic }}">
+    </label>
+    <label>Тип (single/multiple/numeric/text)
+      <input type="text" name="qtype" value="{{ .Q.QType }}">
+    </label>
+    <label>Сложность (0..10)
+      <input type="number" name="difficulty" value="{{ .Q.Difficulty }}" min="0" max="10">
+    </label>
+    <label>Payload (JSON)
+      <textarea name="payload" rows="10">{{ printf "%s" .Q.Payload }}</textarea>
+    </label>
+    <div style="display:flex;gap:10px">
+      <button class="btn" type="submit">Сохранить</button>
+      <a class="btn-ghost btn" href="/admin/questions">Назад</a>
+    </div>
+  </form>
+{{ end }}

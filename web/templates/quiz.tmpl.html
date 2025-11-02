@@ -1,0 +1,90 @@
+{{ define "title" }}Квиз — Learny{{ end }}
+{{ template "base.tmpl.html" . }}
+{{ define "content" }}
+<h1>{{ .Title }}</h1>
+
+<div id="timer" class="card" style="display:none; font-weight:600">Осталось: <span id="tleft"></span></div>
+
+<form id="quiz-form" method="post" action="/quiz/finish">
+  <input type="hidden" name="attempt_id" value="{{ .AttemptID }}">
+  <input type="hidden" name="elapsed_sec" id="elapsed_sec" value="0">
+  <input type="hidden" name="quiz_id" value="{{ .QuizID }}">
+
+  {{ range .Questions }}
+  <fieldset class="card">
+    <legend>Вопрос #{{ .ID }} · Тема: {{ .Topic }} · Сложность: {{ .Difficulty }}</legend>
+    {{ $qid := .ID }}
+    {{ $qtype := .QType }}
+    <div data-payload='{{ printf "%s" .Payload }}' id="q-{{$qid}}"></div>
+    <script>
+      (function(){
+        const node = document.getElementById('q-{{ $qid }}');
+        const p = JSON.parse(node.getAttribute('data-payload'));
+        const qname = "q_{{ $qid }}";
+        switch ("{{ $qtype }}") {
+          case "single":
+            node.innerHTML =
+              '<p>'+p.text+'</p>' +
+              p.choices.map((c,i)=>(
+                '<label><input type="radio" name="'+qname+'" value="'+i+'"> '+c+'</label>'
+              )).join('<br>');
+            break;
+          case "multiple":
+            node.innerHTML =
+              '<p>'+p.text+'</p>' +
+              p.choices.map((c,i)=>(
+                '<label><input type="checkbox" name="'+qname+'" value="'+i+'"> '+c+'</label>'
+              )).join('<br>') +
+              '<p class="muted">Можно выбрать несколько вариантов</p>';
+            break;
+          case "numeric":
+            node.innerHTML = '<p>'+p.text+'</p><input type="number" step="any" name="'+qname+'">';
+            break;
+          case "text":
+            node.innerHTML = '<p>'+p.text+'</p><input type="text" name="'+qname+'" autocomplete="off">';
+            break;
+          default:
+            node.innerHTML = '<pre>'+JSON.stringify(p,null,2)+'</pre>';
+        }
+      })();
+    </script>
+  </fieldset>
+  {{ end }}
+
+  <button type="submit">Завершить и отправить</button>
+</form>
+
+<script>
+(function(){
+  const limit = {{ if .TimeLimitSec }}{{ .TimeLimitSec }}{{ else }}0{{ end }};
+  const timerBox = document.getElementById('timer');
+  const tleft = document.getElementById('tleft');
+  const form = document.getElementById('quiz-form');
+  const elapsedField = document.getElementById('elapsed_sec');
+
+  let start = Date.now();
+  let tickHandle = null;
+
+  function fmt(sec) {
+    const m = Math.floor(sec/60), s = sec%60;
+    return m + 'м ' + (s<10?'0':'') + s + 'с';
+  }
+  function tick(){
+    const elapsed = Math.floor((Date.now() - start)/1000);
+    elapsedField.value = String(elapsed);
+    if (limit > 0) {
+      const left = Math.max(0, limit - elapsed);
+      tleft.textContent = fmt(left);
+      if (left === 0) {
+        clearInterval(tickHandle);
+        form.submit();
+        return;
+      }
+    }
+  }
+  if (limit > 0) { timerBox.style.display = 'block'; }
+  tickHandle = setInterval(tick, 1000);
+  tick();
+})();
+</script>
+{{ end }}

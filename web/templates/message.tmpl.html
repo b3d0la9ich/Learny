@@ -1,0 +1,7 @@
+{{ define "title" }}{{ .Title }} — Learny{{ end }}
+{{ template "base.tmpl.html" . }}
+{{ define "content" }}
+<h1>{{ .Title }}</h1>
+<p>{{ .Message }}</p>
+<p><a class="btn" href="javascript:history.back()">Назад</a></p>
+{{ end }}

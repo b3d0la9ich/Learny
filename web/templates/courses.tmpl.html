@@ -1,0 +1,34 @@
+{{ define "title" }}Курсы — Learny{{ end }}
+{{ template "base.tmpl.html" . }}
+{{ define "content" }}
+<h1>Курсы</h1>
+
+{{ if not .Courses }}
+  <div class="empty">Курсы ещё не созданы.</div>
+{{ else }}
+  <div class="grid">
+    {{ range .Courses }}
+    <div class="card">
+      <strong style="font-size:18px">{{ .Title }}</strong>
+      <div class="small muted" style="margin-top:6px">{{ .Description }}</div>
+
+      <h2 style="margin-top:14px">Квизы</h2>
+      {{ $cid := .ID }}
+      {{ $qs := index $.QMap $cid }}
+      {{ if not $qs }}
+        <div class="empty small">Нет квизов</div>
+      {{ else }}
+        <ul class="list">
+          {{ range $qs }}
+          <li class="row" style="display:flex;align-items:center;justify-content:space-between">
+            <span>{{ .Title }}</span>
+            <a class="btn" href="/quiz/start?course_id={{ $cid }}&quiz_id={{ .ID }}">Начать</a>
+          </li>
+          {{ end }}
+        </ul>
+      {{ end }}
+    </div>
+    {{ end }}
+  </div>
+{{ end }}
+{{ end }}

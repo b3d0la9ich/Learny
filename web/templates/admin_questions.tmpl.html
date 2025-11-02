@@ -1,0 +1,45 @@
+{{ define "title" }}Админ: вопросы — Learny{{ end }}
+{{ template "base.tmpl.html" . }}
+{{ define "content" }}
+  <h1>Админ: вопросы</h1>
+
+  <form method="get" class="card"
+        style="display:grid;grid-template-columns:1fr 1fr 1fr 120px;gap:12px;align-items:end">
+    <div>
+      <label class="small muted">Курс</label>
+      <select name="course_id">
+        {{ range .Courses }}
+          <option value="{{ .ID }}" {{ if eq $.Selected .ID }}selected{{ end }}>{{ .Title }}</option>
+        {{ end }}
+      </select>
+    </div>
+    <div>
+      <label class="small muted">Тема</label>
+      <input type="text" name="topic" value="{{ .Topic }}">
+    </div>
+    <div>
+      <label class="small muted">Тип</label>
+      <input type="text" name="qtype" value="{{ .QType }}" placeholder="single/multiple/numeric/text">
+    </div>
+    <div>
+      <label class="small muted">Лимит</label>
+      <input type="number" name="limit" value="{{ .Limit }}" min="1" max="1000">
+    </div>
+    <button class="btn" type="submit">Фильтр</button>
+  </form>
+
+  <table class="table">
+    <thead><tr><th>ID</th><th>Тема</th><th>Тип</th><th>Сложн.</th><th></th></tr></thead>
+    <tbody>
+      {{ range .Rows }}
+        <tr>
+          <td>{{ .ID }}</td>
+          <td>{{ .Topic }}</td>
+          <td>{{ .QType }}</td>
+          <td>{{ .Difficulty }}</td>
+          <td><a class="btn-ghost btn" href="/admin/questions/edit?id={{ .ID }}">Править</a></td>
+        </tr>
+      {{ end }}
+    </tbody>
+  </table>
+{{ end }}

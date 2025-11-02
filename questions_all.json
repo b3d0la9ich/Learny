@@ -1,0 +1,22 @@
+[
+  {"course_id": 1, "topic": "Адресация IPv4", "qtype": "single", "difficulty": 1, "payload_json": {"text":"Сколько бит в маске /24?","choices":["8","16","24","32"],"correct":[2]}},
+  {"course_id": 1, "topic": "Порты TCP/UDP", "qtype": "single", "difficulty": 1, "payload_json": {"text":"Какой TCP-порт использует HTTP?","choices":["21","22","23","80"],"correct":[3]}},
+  {"course_id": 1, "topic": "Порты TCP/UDP", "qtype": "multiple", "difficulty": 2, "payload_json": {"text":"Выберите HTTPS и SMTPS (TCP)","choices":["443","25","465","110"],"correct":[0,2]}},
+  {"course_id": 1, "topic": "Основы TCP/IP", "qtype": "text", "difficulty": 1, "payload_json": {"text":"Как называется механизм проверки целостности на L3? (одно слово)","accept":["checksum","контрольная сумма","чексума"]}},
+  {"course_id": 1, "topic": "Подсети", "qtype": "numeric", "difficulty": 2, "payload_json": {"text":"Сколько адресов хостов в /26 (не считая сеть и broadcast)?","correct_value":62}},
+  {"course_id": 1, "topic": "Маршрутизация", "qtype": "single", "difficulty": 2, "payload_json": {"text":"Какой протокол — протокол динамической маршрутизации?","choices":["ARP","OSPF","ICMP","DNS"],"correct":[1]}},
+
+  {"course_id": 2, "topic": "Файловая система", "qtype": "single", "difficulty": 1, "payload_json": {"text":"Какой каталог содержит конфиги системы?","choices":["/bin","/etc","/var","/tmp"],"correct":[1]}},
+  {"course_id": 2, "topic": "Права доступа", "qtype": "multiple", "difficulty": 2, "payload_json": {"text":"Выберите права для rwxr-x---","choices":["владелец: rwx","группа: r-x","остальные: r-x","остальные: ---"],"correct":[0,1,3]}},
+  {"course_id": 2, "topic": "Процессы", "qtype": "text", "difficulty": 1, "payload_json": {"text":"Команда для поиска строки в файлах (одно слово)","accept":["grep"]}},
+  {"course_id": 2, "topic": "Пакеты", "qtype": "single", "difficulty": 1, "payload_json": {"text":"Какой менеджер пакетов используется в Debian/Ubuntu?","choices":["yum","dnf","apt","pacman"],"correct":[2]}},
+  {"course_id": 2, "topic": "Сеть", "qtype": "numeric", "difficulty": 2, "payload_json": {"text":"Сколько байт в стандартном MTU Ethernet?","correct_value":1500}},
+  {"course_id": 2, "topic": "Службы systemd", "qtype": "single", "difficulty": 2, "payload_json": {"text":"Как добавить юнит в автозагрузку?","choices":["systemctl start","systemctl enable","systemctl disable","systemctl status"],"correct":[1]}},
+
+  {"course_id": 3, "topic": "Криптография", "qtype": "single", "difficulty": 1, "payload_json": {"text":"Какой алгоритм относится к симметричным?","choices":["RSA","ECC","AES","DSA"],"correct":[2]}},
+  {"course_id": 3, "topic": "Аутентификация", "qtype": "text", "difficulty": 1, "payload_json": {"text":"Расшифруй аббревиатуру MFA (три слова)","accept":["multi factor authentication","multi-factor authentication","многофакторная аутентификация"]}},
+  {"course_id": 3, "topic": "Сетевые угрозы", "qtype": "multiple", "difficulty": 2, "payload_json": {"text":"Выберите атаки уровня приложений","choices":["SQL Injection","ARP Spoofing","XSS","SYN Flood"],"correct":[0,2]}},
+  {"course_id": 3, "topic": "Политики ИБ", "qtype": "single", "difficulty": 1, "payload_json": {"text":"Что такое DLP?","choices":["средство защиты от потери данных","протокол туннелирования","межсетевой экран","антивирус"],"correct":[0]}},
+  {"course_id": 3, "topic": "Оценка рисков", "qtype": "numeric", "difficulty": 2, "payload_json": {"text":"Если вероятность=0.2 и ущерб=50000, ожидаемый риск = ?","correct_value":10000}},
+  {"course_id": 3, "topic": "Модель доступа", "qtype": "single", "difficulty": 2, "payload_json": {"text":"Какая модель основана на мандатном контроле доступа?","choices":["Bell-LaPadula","Biba","RBAC","DAC"],"correct":[0]}}
+]
