@@ -1,21 +1,36 @@
 {{ define "title" }}Админ: пользователи — Learny{{ end }}
 {{ template "base.tmpl.html" . }}
 {{ define "content" }}
+
 <h1>Пользователи</h1>
-<ul class="list">
+
+<table>
+  <tr>
+    <th>Email</th>
+    <th>Роль</th>
+    <th>Действия</th>
+  </tr>
+
   {{ range .Users }}
-  <li class="card">
-    <strong>#{{ .ID }} — {{ .Email }}</strong> <span class="muted">(роль: {{ .Role }})</span>
-    <form method="post" style="margin-top:8px; display:flex; gap:8px; align-items:center">
-      <input type="hidden" name="user_id" value="{{ .ID }}">
-      <select name="role">
-        <option value="student" {{ if eq .Role "student" }}selected{{ end }}>student</option>
-        <option value="teacher" {{ if eq .Role "teacher" }}selected{{ end }}>teacher</option>
-        <option value="admin"   {{ if eq .Role "admin" }}selected{{ end }}>admin</option>
-      </select>
-      <button type="submit">Обновить</button>
-    </form>
-  </li>
+  <tr>
+    <td>{{ .Email }}</td>
+    <td>{{ .Role }}</td>
+    <td>
+      <!-- смена роли -->
+      <form method="post" style="display:inline-flex; gap:8px; align-items:center">
+        <input type="hidden" name="user_id" value="{{ .ID }}">
+        <select name="role">
+          <option value="student" {{ if eq .Role "student" }}selected{{ end }}>student</option>
+          <option value="teacher" {{ if eq .Role "teacher" }}selected{{ end }}>teacher</option>
+          <option value="admin"   {{ if eq .Role "admin" }}selected{{ end }}>admin</option>
+        </select>
+        <button type="submit">Сохранить</button>
+      </form>
+
+      <a href="/admin/logs?user_id={{ .ID }}" style="margin-left:12px;">логи</a>
+    </td>
+  </tr>
   {{ end }}
-</ul>
+</table>
+
 {{ end }}

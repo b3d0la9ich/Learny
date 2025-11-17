@@ -1,0 +1,11 @@
+{
+  "time_limit_sec": 600,
+  "max_attempts": 5,
+  "retake_cooldown_sec": 300,
+  "count_single": 4,
+  "count_multiple": 2,
+  "count_numeric": 1,
+  "count_text": 1,
+  "min_difficulty": 1,
+  "max_difficulty": 3
+}

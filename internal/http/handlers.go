@@ -8,6 +8,8 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -16,9 +18,6 @@ import (
 	a "learny/internal/auth"
 	"learny/internal/repo"
 	"learny/internal/util"
-
-	"os"
-	"path/filepath"
 )
 
 type Server struct {
@@ -41,7 +40,6 @@ func (s *Server) Routes(mux *http.ServeMux) {
 	mux.Handle("/quiz/start", RequireAuth(http.HandlerFunc(s.handleQuizStart)))
 	mux.Handle("/quiz/finish", RequireAuth(http.HandlerFunc(s.handleQuizFinish)))
 
-	mux.Handle("/recommendations", RequireAuth(http.HandlerFunc(s.handleRecommendations)))
 	mux.Handle("/topics", RequireAuth(http.HandlerFunc(s.handleTopics)))
 	mux.Handle("/topic", RequireAuth(http.HandlerFunc(s.handleTopicProfile)))
 
@@ -62,7 +60,7 @@ func (s *Server) Routes(mux *http.ServeMux) {
 
 /* ---------- универсальный рендер с подбором имени шаблона ---------- */
 
-// renderSafe: поднимает только base + конкретную страницу, чтобы не было конфликтов define.
+// render: поднимает только base + конкретную страницу, чтобы не было конфликтов define.
 func (s *Server) render(w http.ResponseWriter, r *http.Request, name string, data map[string]any) {
 	if data == nil {
 		data = map[string]any{}
@@ -297,6 +295,7 @@ func (s *Server) handleCourses(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleQuizStart(w http.ResponseWriter, r *http.Request) {
 	uid, _ := a.CurrentUserID(r)
+
 	courseID := int64(1)
 	if v := r.URL.Query().Get("course_id"); v != "" {
 		if x, err := strconv.ParseInt(v, 10, 64); err == nil {
@@ -350,6 +349,28 @@ func (s *Server) handleQuizStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// обёртка для красивой нумерации 1..N
+	type quizQuestionView struct {
+		Ord        int
+		ID         int64
+		Topic      string
+		QType      string
+		Difficulty int
+		Payload    json.RawMessage
+	}
+
+	vqs := make([]quizQuestionView, 0, len(qs))
+	for i, q := range qs {
+		vqs = append(vqs, quizQuestionView{
+			Ord:        i + 1,
+			ID:         q.ID,
+			Topic:      q.Topic,
+			QType:      q.QType,
+			Difficulty: q.Difficulty,
+			Payload:    q.Payload,
+		})
+	}
+
 	var tl int
 	if rules.TimeLimitSec > 0 {
 		tl = rules.TimeLimitSec
@@ -358,7 +379,7 @@ func (s *Server) handleQuizStart(w http.ResponseWriter, r *http.Request) {
 	s.render(w, r, "quiz", map[string]any{
 		"Title":        title,
 		"AttemptID":    attemptID,
-		"Questions":    qs,
+		"Questions":    vqs,
 		"TimeLimitSec": tl,
 		"QuizID":       quizID,
 	})
@@ -491,30 +512,6 @@ func (s *Server) handleQuizFinish(w http.ResponseWriter, r *http.Request) {
 	s.render(w, r, "result", map[string]any{"AttemptID": attemptID, "Score": score})
 }
 
-/* ===== Темы/рекомендации ===== */
-
-func (s *Server) handleRecommendations(w http.ResponseWriter, r *http.Request) {
-	uid, _ := a.CurrentUserID(r)
-	courseID := int64(1)
-	stats, _ := s.Repo.TopicStatsByUser(r.Context(), uid, courseID)
-
-	type Row struct {
-		Topic   string
-		Total   int
-		Correct int
-		Percent int
-	}
-	var rows []Row
-	for _, st := range stats {
-		p := 0
-		if st.Total > 0 {
-			p = int((float64(st.Correct)/float64(st.Total))*100.0 + 0.5)
-		}
-		rows = append(rows, Row{Topic: st.Topic, Total: st.Total, Correct: st.Correct, Percent: p})
-	}
-	s.render(w, r, "recommendations", map[string]any{"Rows": rows})
-}
-
 func (s *Server) handleTopics(w http.ResponseWriter, r *http.Request) {
 	uid, _ := a.CurrentUserID(r)
 	courseID := int64(1)
@@ -540,17 +537,54 @@ func (s *Server) handleTopics(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleTopicProfile(w http.ResponseWriter, r *http.Request) {
 	uid, _ := a.CurrentUserID(r)
 	courseID := int64(1)
+
 	topic := strings.TrimSpace(r.URL.Query().Get("name"))
 	if topic == "" {
 		http.Redirect(w, r, "/topics", http.StatusFound)
 		return
 	}
+
 	detail, err := s.Repo.TopicDetail(r.Context(), uid, courseID, topic)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	s.render(w, r, "topic", map[string]any{"Topic": topic, "Detail": detail})
+
+	type Row struct {
+		Ord     int
+		QID     int64
+		WhenStr string
+		Status  string
+	}
+
+	rows := make([]Row, 0, len(detail))
+	for i, d := range detail {
+
+		// красивое время
+		when := d.When.In(time.Local).Format("02.01.2006 15:04")
+
+		// строка статуса
+		st := "—"
+		if d.Correct != nil {
+			if *d.Correct {
+				st = "✔ Верно"
+			} else {
+				st = "✘ Неверно"
+			}
+		}
+
+		rows = append(rows, Row{
+			Ord:     i + 1,
+			QID:     d.QID,
+			WhenStr: when,
+			Status:  st,
+		})
+	}
+
+	s.render(w, r, "topic", map[string]any{
+		"Topic": topic,
+		"Rows":  rows,
+	})
 }
 
 /* ===== Импорт CSV/JSON ===== */
@@ -559,10 +593,9 @@ func (s *Server) handleAdminUploadGetPost(w http.ResponseWriter, r *http.Request
 	switch r.Method {
 	case http.MethodGet:
 		cs, _ := s.Repo.ListCourses(r.Context())
-		// FIX: правильное имя шаблона
 		s.render(w, r, "admin_upload", map[string]any{"Courses": cs})
 	case http.MethodPost:
-		if err := r.ParseMultipartForm(10<<20); err != nil {
+		if err := r.ParseMultipartForm(10 << 20); err != nil {
 			http.Error(w, "form too large", 400)
 			return
 		}
@@ -591,7 +624,6 @@ func (s *Server) handleAdminUploadGetPost(w http.ResponseWriter, r *http.Request
 		}
 
 		cs, _ := s.Repo.ListCourses(r.Context())
-		// FIX: правильное имя шаблона
 		s.render(w, r, "admin_upload",
 			map[string]any{"OK": true, "Count": count, "Courses": cs, "Selected": courseID})
 	}
@@ -743,6 +775,23 @@ func (s *Server) handleAdminQuizzes(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type adminResultAttempt struct {
+	Ord       int
+	ID        int64
+	UserEmail string
+	QuizTitle string
+
+	WhenStr  string
+	HasScore bool
+	ScoreVal float64
+}
+
+type adminResultsPage struct {
+	Courses  []repo.CourseRow
+	Selected int64
+	Attempts []adminResultAttempt
+}
+
 func (s *Server) handleAdminResults(w http.ResponseWriter, r *http.Request) {
 	cid := int64(1)
 	if v := r.URL.Query().Get("course_id"); v != "" {
@@ -750,9 +799,56 @@ func (s *Server) handleAdminResults(w http.ResponseWriter, r *http.Request) {
 			cid = x
 		}
 	}
-	cs, _ := s.Repo.ListCourses(r.Context())
-	rows, _ := s.Repo.ListAttemptsByCourse(r.Context(), cid)
-	s.render(w, r, "admin_results", map[string]any{"Courses": cs, "Selected": cid, "Attempts": rows})
+
+	cs, err := s.Repo.ListCourses(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	rows, err := s.Repo.ListAttemptsByCourse(r.Context(), cid)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	view := make([]adminResultAttempt, 0, len(rows))
+	for i, a := range rows {
+		var whenStr string
+		if a.FinishedAt != nil {
+			whenStr = a.FinishedAt.In(time.Local).Format("02.01.2006 15:04:05")
+		} else {
+			whenStr = ""
+		}
+
+		hasScore := a.Score != nil
+		val := 0.0
+		if a.Score != nil {
+			val = *a.Score
+		}
+
+		view = append(view, adminResultAttempt{
+			Ord:       i + 1,
+			ID:        a.ID,
+			UserEmail: a.UserEmail,
+			QuizTitle: a.QuizTitle,
+			WhenStr:   whenStr,
+			HasScore:  hasScore,
+			ScoreVal:  val,
+		})
+	}
+
+	page := adminResultsPage{
+		Courses:  cs,
+		Selected: cid,
+		Attempts: view,
+	}
+
+	s.render(w, r, "admin_results", map[string]any{
+		"Courses":  page.Courses,
+		"Selected": page.Selected,
+		"Attempts": page.Attempts,
+	})
 }
 
 func (s *Server) handleAdminAttemptDetail(w http.ResponseWriter, r *http.Request) {
@@ -769,6 +865,51 @@ func (s *Server) handleAdminAttemptDetail(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// --- аккуратные строки для хедера попытки ---
+	started := meta.StartedAt.In(time.Local).Format("02.01.2006 15:04:05")
+
+	finished := "—"
+	if meta.FinishedAt != nil {
+		finished = meta.FinishedAt.In(time.Local).Format("02.01.2006 15:04:05")
+	}
+
+	scoreStr := "—"
+	if meta.Score != nil {
+		scoreStr = strconv.FormatFloat(*meta.Score, 'f', 0, 64)
+	}
+
+	durationStr := "—"
+	if meta.DurationSec != nil {
+		durationStr = strconv.Itoa(*meta.DurationSec) + " с"
+	}
+
+	overtimeStr := "Нет"
+	if meta.Overtime {
+		overtimeStr = "Да"
+	}
+
+	metaView := struct {
+		ID        int64
+		UserEmail string
+		QuizTitle string
+
+		StartedAt  string
+		FinishedAt string
+		Score      string
+		Duration   string
+		Overtime   string
+	}{
+		ID:         meta.ID,
+		UserEmail:  meta.UserEmail,
+		QuizTitle:  meta.QuizTitle,
+		StartedAt:  started,
+		FinishedAt: finished,
+		Score:      scoreStr,
+		Duration:   durationStr,
+		Overtime:   overtimeStr,
+	}
+
+	// --- детали вопросов ---
 	type Row struct {
 		Idx        int
 		QuestionID int64
@@ -777,8 +918,9 @@ func (s *Server) handleAdminAttemptDetail(w http.ResponseWriter, r *http.Request
 		Text       string
 		UserAnswer string
 		Correct    string
-		IsCorrect  *bool
+		Status     string // уже готовая строка для колонки "Статус"
 	}
+
 	var out []Row
 	for _, a1 := range answers {
 		var q struct {
@@ -848,6 +990,16 @@ func (s *Server) handleAdminAttemptDetail(w http.ResponseWriter, r *http.Request
 			}
 		}
 
+		// статус
+		status := "—"
+		if a1.IsCorrect != nil {
+			if *a1.IsCorrect {
+				status = "✔"
+			} else {
+				status = "✘"
+			}
+		}
+
 		out = append(out, Row{
 			Idx:        len(out) + 1,
 			QuestionID: a1.QuestionID,
@@ -856,12 +1008,12 @@ func (s *Server) handleAdminAttemptDetail(w http.ResponseWriter, r *http.Request
 			Text:       q.Text,
 			UserAnswer: ua,
 			Correct:    correctText,
-			IsCorrect:  a1.IsCorrect,
+			Status:     status,
 		})
 	}
 
 	s.render(w, r, "admin_attempt", map[string]any{
-		"Meta": meta,
+		"Meta": metaView,
 		"Rows": out,
 	})
 }
@@ -921,10 +1073,40 @@ func (s *Server) handleAdminResultsExport(w http.ResponseWriter, r *http.Request
 }
 
 /*** helpers ***/
-func firstOrEmpty(a []string) string { if len(a) > 0 { return a[0] }; return "" }
-func intSliceToSet(a []int) map[int]struct{} { m := map[int]struct{}{}; for _, v := range a { m[v] = struct{}{} }; return m }
-func setEq(a, b map[int]struct{}) bool { if len(a) != len(b) { return false }; for k := range a { if _, ok := b[k]; !ok { return false } }; return true }
-func abs(x float64) float64 { if x < 0 { return -x }; return x }
+func firstOrEmpty(a []string) string {
+	if len(a) > 0 {
+		return a[0]
+	}
+	return ""
+}
+
+func intSliceToSet(a []int) map[int]struct{} {
+	m := map[int]struct{}{}
+	for _, v := range a {
+		m[v] = struct{}{}
+	}
+	return m
+}
+
+func setEq(a, b map[int]struct{}) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k := range a {
+		if _, ok := b[k]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
+func abs(x float64) float64 {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
+
 func containsCI(hay []string, needle string) bool {
 	n := strings.ToLower(strings.TrimSpace(needle))
 	for _, v := range hay {
@@ -940,13 +1122,17 @@ func containsCI(hay []string, needle string) bool {
 func (s *Server) handleAdminQuestionsList(w http.ResponseWriter, r *http.Request) {
 	cid := int64(1)
 	if v := r.URL.Query().Get("course_id"); v != "" {
-		if x, err := strconv.ParseInt(v, 10, 64); err == nil { cid = x }
+		if x, err := strconv.ParseInt(v, 10, 64); err == nil {
+			cid = x
+		}
 	}
 	topic := strings.TrimSpace(r.URL.Query().Get("topic"))
 	qtype := strings.TrimSpace(r.URL.Query().Get("qtype"))
 	limit := 100
 	if v := r.URL.Query().Get("limit"); v != "" {
-		if x, err := strconv.Atoi(v); err == nil { limit = x }
+		if x, err := strconv.Atoi(v); err == nil {
+			limit = x
+		}
 	}
 
 	cs, _ := s.Repo.ListCourses(r.Context())
@@ -966,13 +1152,22 @@ func (s *Server) handleAdminQuestionEdit(w http.ResponseWriter, r *http.Request)
 	switch r.Method {
 	case http.MethodGet:
 		id, _ := strconv.ParseInt(r.URL.Query().Get("id"), 10, 64)
-		if id == 0 { http.Error(w, "id required", 400); return }
+		if id == 0 {
+			http.Error(w, "id required", 400)
+			return
+		}
 		q, err := s.Repo.GetQuestion(r.Context(), id)
-		if err != nil { http.Error(w, err.Error(), 404); return }
+		if err != nil {
+			http.Error(w, err.Error(), 404)
+			return
+		}
 		s.render(w, r, "admin_question_edit", map[string]any{"Q": q})
 
 	case http.MethodPost:
-		if err := r.ParseForm(); err != nil { http.Error(w, err.Error(), 400); return }
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
 		id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
 		topic := strings.TrimSpace(r.FormValue("topic"))
 		qtype := strings.TrimSpace(r.FormValue("qtype"))
@@ -981,11 +1176,15 @@ func (s *Server) handleAdminQuestionEdit(w http.ResponseWriter, r *http.Request)
 
 		var raw []byte
 		if payload != "" {
-			if !json.Valid([]byte(payload)) { http.Error(w, "payload is not valid JSON", 400); return }
+			if !json.Valid([]byte(payload)) {
+				http.Error(w, "payload is not valid JSON", 400)
+				return
+			}
 			raw = []byte(payload)
 		}
 		if err := s.Repo.UpdateQuestion(r.Context(), id, topic, qtype, diff, raw); err != nil {
-			http.Error(w, err.Error(), 400); return
+			http.Error(w, err.Error(), 400)
+			return
 		}
 		http.Redirect(w, r, "/admin/questions/edit?id="+strconv.FormatInt(id, 10), http.StatusSeeOther)
 	}
@@ -994,17 +1193,78 @@ func (s *Server) handleAdminQuestionEdit(w http.ResponseWriter, r *http.Request)
 func (s *Server) handleAdminLogsByUser(w http.ResponseWriter, r *http.Request) {
 	uidStr := r.URL.Query().Get("user_id")
 	if uidStr == "" {
+		// Режим выбора пользователя
 		users, _ := s.Repo.ListUsers(r.Context())
 		s.render(w, r, "admin_logs", map[string]any{"Users": users})
 		return
 	}
+
 	uid, _ := strconv.ParseInt(uidStr, 10, 64)
+
 	summary, rows, err := s.Repo.UserLogs(r.Context(), uid)
-	if err != nil { http.Error(w, err.Error(), 500); return }
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	// --- аккуратно форматируем сводку ---
+	lastAtStr := "—"
+	if summary.LastAt != nil {
+		lastAtStr = summary.LastAt.In(time.Local).Format("02.01.2006 15:04:05")
+	}
+
+	type summaryView struct {
+		UserEmail string
+		Attempts  int
+		Correct   int
+		Wrong     int
+		LastAt    string
+	}
+
+	sumView := summaryView{
+		UserEmail: summary.UserEmail,
+		Attempts:  summary.Attempts,
+		Correct:   summary.Correct,
+		Wrong:     summary.Wrong,
+		LastAt:    lastAtStr,
+	}
+
+	// --- приводим строки логов к виду для шаблона ---
+	type rowView struct {
+		When   string
+		Action string
+		Detail string
+	}
+
+	viewRows := make([]rowView, 0, len(rows))
+	for _, r0 := range rows {
+		whenStr := r0.When.In(time.Local).Format("02.01.2006 15:04:05")
+
+		status := "—"
+		if r0.IsCorrect != nil {
+			if *r0.IsCorrect {
+				status = "верно"
+			} else {
+				status = "неверно"
+			}
+		}
+
+		action := "Ответ по вопросу"
+		detail := "Тема: " + r0.Topic +
+			", тип: " + r0.QType +
+			", статус: " + status +
+			", попытка #" + strconv.FormatInt(r0.AttemptID, 10)
+
+		viewRows = append(viewRows, rowView{
+			When:   whenStr,
+			Action: action,
+			Detail: detail,
+		})
+	}
 
 	s.render(w, r, "admin_logs", map[string]any{
-		"Summary": summary,
-		"Rows":    rows,
+		"Summary": sumView,
+		"Rows":    viewRows,
 		"UserID":  uid,
 	})
 }

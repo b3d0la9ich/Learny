@@ -10,9 +10,12 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o learny ./cmd/app
 FROM alpine:3.20
 WORKDIR /app
 RUN adduser -D appuser
+
 COPY --from=build /app/learny /app/learny
 COPY web /app/web
 COPY migrations /app/migrations
+COPY questions_all.json /app/questions_all.json
+
 ENV DATABASE_URL=postgres://postgres:postgres@db:5432/edu?sslmode=disable
 USER appuser
 EXPOSE 8080

@@ -2,14 +2,27 @@
 {{ template "base.tmpl.html" . }}
 {{ define "content" }}
 <h1>Тема: {{ .Topic }}</h1>
-<table>
-  <tr><th>Вопрос</th><th>Когда</th><th>Статус</th></tr>
-  {{ range .Detail }}
-  <tr>
-    <td>#{{ .QID }}</td>
-    <td>{{ .When }}</td>
-    <td>{{ if .Correct }}✅{{ else }}❌{{ end }}</td>
-  </tr>
-  {{ end }}
-</table>
+
+{{ if not .Rows }}
+  <div class="empty">Пока нет данных по этой теме.</div>
+{{ else }}
+  <table class="table">
+    <thead>
+      <tr>
+        <th>№</th>
+        <th>Когда</th>
+        <th>Статус</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{ range .Rows }}
+      <tr>
+        <td>#{{ .Ord }}</td>
+        <td>{{ .WhenStr }}</td>
+        <td>{{ .Status }}</td>
+      </tr>
+      {{ end }}
+    </tbody>
+  </table>
+{{ end }}
 {{ end }}

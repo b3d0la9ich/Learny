@@ -1,33 +1,49 @@
-{{ define "title" }}Логи — Learny{{ end }}
+{{ define "title" }}Админ: логи по пользователю — Learny{{ end }}
 {{ template "base.tmpl.html" . }}
 {{ define "content" }}
-  <h1>Логи по пользователю</h1>
 
-  {{ if not .UserID }}
-    <div class="card">
-      <form method="get" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-        <label class="small muted">Пользователь:</label>
-        <select name="user_id">
-          {{ range .Users }}
-            <option value="{{ .ID }}">{{ .Email }}</option>
-          {{ end }}
-        </select>
-        <button class="btn">Показать</button>
-      </form>
-    </div>
-  {{ else }}
-    <p class="muted">Итого: {{ .Summary.Total }} записей.</p>
-    <table class="table">
-      <thead><tr><th>Время</th><th>Действие</th><th>Детали</th></tr></thead>
-      <tbody>
-        {{ range .Rows }}
-          <tr>
-            <td>{{ .At }}</td>
-            <td>{{ .Action }}</td>
-            <td class="small">{{ .Meta }}</td>
-          </tr>
-        {{ end }}
-      </tbody>
-    </table>
+<h1>Логи по пользователю</h1>
+
+{{ if .Summary }}
+
+  <p>
+    Пользователь: <strong>{{ .Summary.UserEmail }}</strong><br>
+    Итого попыток: <strong>{{ .Summary.Attempts }}</strong><br>
+    Верных ответов: <strong>{{ .Summary.Correct }}</strong>,
+    неверных: <strong>{{ .Summary.Wrong }}</strong><br>
+    Последняя активность: <strong>{{ .Summary.LastAt }}</strong>
+  </p>
+
+  <table>
+    <tr>
+      <th>Время</th>
+      <th>Действие</th>
+      <th>Детали</th>
+    </tr>
+
+    {{ range .Rows }}
+    <tr>
+      <td>{{ .When }}</td>
+      <td>{{ .Action }}</td>
+      <td>{{ .Detail }}</td>
+    </tr>
+    {{ end }}
+  </table>
+
+  {{ if not .Rows }}
+    <p>По этому пользователю ещё нет записей.</p>
   {{ end }}
+
+{{ else }}
+
+  <p>Выберите пользователя, чтобы посмотреть его логи:</p>
+
+  <ul>
+    {{ range .Users }}
+      <li><a href="/admin/logs?user_id={{ .ID }}">{{ .Email }}</a></li>
+    {{ end }}
+  </ul>
+
+{{ end }}
+
 {{ end }}

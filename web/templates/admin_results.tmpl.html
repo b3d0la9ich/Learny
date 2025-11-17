@@ -7,25 +7,54 @@
   <label>Курс
     <select name="course_id">
       {{ range .Courses }}
-        <option value="{{ .ID }}" {{ if eq $.Selected .ID }}selected{{ end }}>#{{ .ID }} — {{ .Title }}</option>
+        <option value="{{ .ID }}" {{ if eq $.Selected .ID }}selected{{ end }}>
+          #{{ .ID }} — {{ .Title }}
+        </option>
       {{ end }}
     </select>
   </label>
   <button type="submit">Показать</button>
 </form>
 
-<p><a class="btn" href="/admin/results/export?course_id={{ .Selected }}">Экспорт CSV</a></p>
+<p>
+  <a class="btn" href="/admin/results/export?course_id={{ .Selected }}">Экспорт CSV</a>
+</p>
 
 <table>
-  <tr><th>ID попытки</th><th>Пользователь</th><th>Квиз</th><th>Завершено</th><th>Балл</th><th></th></tr>
+  <tr>
+    <th>№</th>
+    <th>Пользователь</th>
+    <th>Квиз</th>
+    <th>Завершено</th>
+    <th>Балл</th>
+    <th></th>
+  </tr>
   {{ range .Attempts }}
   <tr>
-    <td>{{ .ID }}</td>
-    <td>{{ .UserEmail }}</td>
-    <td>{{ .QuizTitle }}</td>
-    <td>{{ if .FinishedAt }}{{ .FinishedAt }}{{ else }}—{{ end }}</td>
-    <td>{{ if .Score }}{{ printf "%.0f" .Score }}{{ else }}—{{ end }}</td>
-    <td><a href="/admin/attempt?id={{ .ID }}">детали</a></td>
+    <td style="text-align:center; width:40px">{{ .Ord }}</td>
+    <td style="min-width:180px">
+      <div>{{ .UserEmail }}</div>
+    </td>
+    <td style="min-width:200px">
+      <div>{{ .QuizTitle }}</div>
+    </td>
+    <td style="min-width:180px">
+      {{ if .WhenStr }}
+        {{ .WhenStr }}
+      {{ else }}
+        —
+      {{ end }}
+    </td>
+    <td style="width:80px; text-align:right">
+      {{ if .HasScore }}
+        {{ printf "%.0f" .ScoreVal }}
+      {{ else }}
+        —
+      {{ end }}
+    </td>
+    <td style="width:80px; text-align:right">
+      <a href="/admin/attempt?id={{ .ID }}">детали</a>
+    </td>
   </tr>
   {{ end }}
 </table>

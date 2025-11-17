@@ -185,3 +185,28 @@ input:focus,textarea:focus,select:focus{ border-color:var(--brand) }
 /* защита от неожиданных перекрытий
    – если вдруг где-то стоит абсолютный фон */
 * { pointer-events: auto }
+
+.quiz-question {
+  margin-bottom: 20px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: #020617;
+  border: 1px solid #1f2937;
+}
+
+.quiz-question-header {
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.quiz-question-number {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.quiz-question-meta {
+  font-size: 13px;
+  color: #9ca3af;
+}

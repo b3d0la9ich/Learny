@@ -3,7 +3,16 @@
 {{ define "content" }}
 <h1>{{ .Title }}</h1>
 
-<div id="timer" class="card" style="display:none; font-weight:600">Осталось: <span id="tleft"></span></div>
+<style>
+  /* Подсветка незаполненных вопросов */
+  .question-block.has-error {
+    box-shadow: 0 0 0 1px #f97373;
+  }
+</style>
+
+<div id="timer" class="card" style="display:none; font-weight:600">
+  Осталось: <span id="tleft"></span>
+</div>
 
 <form id="quiz-form" method="post" action="/quiz/finish">
   <input type="hidden" name="attempt_id" value="{{ .AttemptID }}">
@@ -11,37 +20,42 @@
   <input type="hidden" name="quiz_id" value="{{ .QuizID }}">
 
   {{ range .Questions }}
-  <fieldset class="card">
-    <legend>Вопрос #{{ .ID }} · Тема: {{ .Topic }} · Сложность: {{ .Difficulty }}</legend>
-    {{ $qid := .ID }}
-    {{ $qtype := .QType }}
-    <div data-payload='{{ printf "%s" .Payload }}' id="q-{{$qid}}"></div>
+  {{ $qid := .ID }}
+  {{ $qtype := .QType }}
+  <fieldset class="card question-block" data-qid="{{ $qid }}" data-qtype="{{ $qtype }}">
+    <legend>Вопрос #{{ .Ord }} · Тема: {{ .Topic }} · Сложность: {{ .Difficulty }}</legend>
+    <div data-payload='{{ printf "%s" .Payload }}' id="q-{{ $qid }}"></div>
     <script>
       (function(){
         const node = document.getElementById('q-{{ $qid }}');
         const p = JSON.parse(node.getAttribute('data-payload'));
         const qname = "q_{{ $qid }}";
+
         switch ("{{ $qtype }}") {
           case "single":
             node.innerHTML =
               '<p>'+p.text+'</p>' +
-              p.choices.map((c,i)=>(
-                '<label><input type="radio" name="'+qname+'" value="'+i+'"> '+c+'</label>'
-              )).join('<br>');
+              p.choices.map((c,i)=>
+                '<label class="opt"><input type="radio" name="'+qname+'" value="'+i+'"> '+c+'</label>'
+              ).join('<br>');
             break;
           case "multiple":
             node.innerHTML =
               '<p>'+p.text+'</p>' +
-              p.choices.map((c,i)=>(
-                '<label><input type="checkbox" name="'+qname+'" value="'+i+'"> '+c+'</label>'
-              )).join('<br>') +
+              p.choices.map((c,i)=>
+                '<label class="opt"><input type="checkbox" name="'+qname+'" value="'+i+'"> '+c+'</label>'
+              ).join('<br>') +
               '<p class="muted">Можно выбрать несколько вариантов</p>';
             break;
           case "numeric":
-            node.innerHTML = '<p>'+p.text+'</p><input type="number" step="any" name="'+qname+'">';
+            node.innerHTML =
+              '<p>'+p.text+'</p>' +
+              '<input type="number" step="any" name="'+qname+'">';
             break;
           case "text":
-            node.innerHTML = '<p>'+p.text+'</p><input type="text" name="'+qname+'" autocomplete="off">';
+            node.innerHTML =
+              '<p>'+p.text+'</p>' +
+              '<input type="text" name="'+qname+'" autocomplete="off">';
             break;
           default:
             node.innerHTML = '<pre>'+JSON.stringify(p,null,2)+'</pre>';
@@ -51,7 +65,7 @@
   </fieldset>
   {{ end }}
 
-  <button type="submit">Завершить и отправить</button>
+  <button type="submit" class="btn">Завершить и отправить</button>
 </form>
 
 <script>
@@ -66,15 +80,18 @@
   let tickHandle = null;
 
   function fmt(sec) {
-    const m = Math.floor(sec/60), s = sec%60;
-    return m + 'м ' + (s<10?'0':'') + s + 'с';
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return m + 'м ' + (s < 10 ? '0' : '') + s + 'с';
   }
-  function tick(){
-    const elapsed = Math.floor((Date.now() - start)/1000);
+
+  function tick() {
+    const elapsed = Math.floor((Date.now() - start) / 1000);
     elapsedField.value = String(elapsed);
+
     if (limit > 0) {
       const left = Math.max(0, limit - elapsed);
-      tleft.textContent = fmt(left);
+      if (tleft) tleft.textContent = fmt(left);
       if (left === 0) {
         clearInterval(tickHandle);
         form.submit();
@@ -82,9 +99,52 @@
       }
     }
   }
-  if (limit > 0) { timerBox.style.display = 'block'; }
+
+  if (limit > 0 && timerBox) {
+    timerBox.style.display = 'block';
+  }
   tickHandle = setInterval(tick, 1000);
   tick();
+
+  // ===== ВАЛИДАЦИЯ: не даём отправить, пока не заполнены все вопросы =====
+  form.addEventListener('submit', function(e) {
+    const blocks = document.querySelectorAll('.question-block');
+    let errors = 0;
+
+    blocks.forEach(block => {
+      const qid = block.getAttribute('data-qid');
+      const qtype = block.getAttribute('data-qtype');
+      const name = 'q_' + qid;
+      let ok = false;
+
+      if (qtype === 'single') {
+        ok = !!block.querySelector('input[type="radio"][name="'+name+'"]:checked');
+      } else if (qtype === 'multiple') {
+        ok = !!block.querySelector('input[type="checkbox"][name="'+name+'"]:checked');
+      } else if (qtype === 'numeric' || qtype === 'text') {
+        const inp = block.querySelector('input[name="'+name+'"]');
+        if (inp && inp.value.trim() !== '') ok = true;
+      } else {
+        ok = true; // на всякий случай
+      }
+
+      if (!ok) {
+        errors++;
+        block.classList.add('has-error');
+      } else {
+        block.classList.remove('has-error');
+      }
+    });
+
+    if (errors > 0) {
+      e.preventDefault();
+      alert('Заполните ответы на все вопросы перед отправкой. Незаполненных: ' + errors);
+      const first = document.querySelector('.question-block.has-error');
+      if (first) {
+        first.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  });
 })();
 </script>
 {{ end }}
