@@ -29,11 +29,10 @@
   </form>
 
   <table class="table">
-    <thead><tr><th>ID</th><th>Тема</th><th>Тип</th><th>Сложн.</th><th></th></tr></thead>
+    <thead><tr><th>Тема</th><th>Тип</th><th>Сложн.</th><th></th></tr></thead>
     <tbody>
       {{ range .Rows }}
         <tr>
-          <td>{{ .ID }}</td>
           <td>{{ .Topic }}</td>
           <td>{{ .QType }}</td>
           <td>{{ .Difficulty }}</td>

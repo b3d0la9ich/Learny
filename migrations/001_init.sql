@@ -1,9 +1,21 @@
+-- ========== ROLES ==========
+CREATE TABLE IF NOT EXISTS roles (
+  id   BIGSERIAL PRIMARY KEY,
+  name TEXT UNIQUE NOT NULL
+);
+
+INSERT INTO roles (id, name) VALUES
+  (1, 'admin'),
+  (2, 'student'),
+  (3, 'teacher')
+ON CONFLICT (id) DO NOTHING;
+
 -- ========== USERS ==========
 CREATE TABLE IF NOT EXISTS users (
   id        BIGSERIAL PRIMARY KEY,
   email     TEXT UNIQUE NOT NULL,
   pass_hash TEXT NOT NULL,
-  role      TEXT NOT NULL DEFAULT 'student'
+  role_id   BIGINT NOT NULL REFERENCES roles(id)
 );
 
 -- ========== COURSES ==========
@@ -76,8 +88,3 @@ CREATE TABLE IF NOT EXISTS answers (
 
 -- ========== EXTENSIONS ==========
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
--- ========== ADMIN (если нет) ==========
-INSERT INTO users (email, pass_hash, role)
-VALUES ('admin@example.com', crypt('admin123', gen_salt('bf')), 'admin')
-ON CONFLICT (email) DO NOTHING;

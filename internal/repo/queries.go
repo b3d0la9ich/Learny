@@ -24,16 +24,22 @@ type UserRow struct {
 
 func (r *Repo) CreateUser(ctx context.Context, email, passHash string) (int64, error) {
 	row := r.DB.QueryRowContext(ctx,
-		`INSERT INTO users(email, pass_hash, role) VALUES ($1,$2,'student') RETURNING id`,
+		`INSERT INTO users(email, pass_hash, role_id)
+         VALUES ($1, $2, (SELECT id FROM roles WHERE name = 'student'))
+         RETURNING id`,
 		email, passHash,
 	)
 	var id int64
 	return id, row.Scan(&id)
 }
 
+
 func (r *Repo) FindUserByEmail(ctx context.Context, email string) (*UserRow, error) {
 	row := r.DB.QueryRowContext(ctx,
-		`SELECT id, email, pass_hash, role FROM users WHERE email=$1`,
+		`SELECT u.id, u.email, u.pass_hash, r.name AS role
+         FROM users u
+         JOIN roles r ON r.id = u.role_id
+         WHERE u.email = $1`,
 		email,
 	)
 	var u UserRow
@@ -42,6 +48,7 @@ func (r *Repo) FindUserByEmail(ctx context.Context, email string) (*UserRow, err
 	}
 	return &u, nil
 }
+
 
 func (r *Repo) UpdateUserPass(ctx context.Context, userID int64, newHash string) error {
 	_, err := r.DB.ExecContext(ctx,
@@ -54,7 +61,10 @@ func (r *Repo) UpdateUserPass(ctx context.Context, userID int64, newHash string)
 func (r *Repo) GetUserRole(ctx context.Context, userID int64) (string, error) {
 	var role string
 	err := r.DB.QueryRowContext(ctx,
-		`SELECT role FROM users WHERE id=$1`,
+		`SELECT r.name
+         FROM users u
+         JOIN roles r ON r.id = u.role_id
+         WHERE u.id = $1`,
 		userID,
 	).Scan(&role)
 	return role, err
@@ -62,7 +72,10 @@ func (r *Repo) GetUserRole(ctx context.Context, userID int64) (string, error) {
 
 func (r *Repo) ListUsers(ctx context.Context) ([]UserRow, error) {
 	rows, err := r.DB.QueryContext(ctx,
-		`SELECT id,email,pass_hash,role FROM users ORDER BY id`,
+		`SELECT u.id, u.email, u.pass_hash, r.name AS role
+         FROM users u
+         JOIN roles r ON r.id = u.role_id
+         ORDER BY u.id`,
 	)
 	if err != nil {
 		return nil, err
@@ -80,18 +93,23 @@ func (r *Repo) ListUsers(ctx context.Context) ([]UserRow, error) {
 	return out, rows.Err()
 }
 
+
 func (r *Repo) UpdateUserRole(ctx context.Context, userID int64, role string) error {
 	switch role {
 	case "student", "teacher", "admin":
 	default:
 		return fmt.Errorf("invalid role")
 	}
+
 	_, err := r.DB.ExecContext(ctx,
-		`UPDATE users SET role=$2 WHERE id=$1`,
+		`UPDATE users
+         SET role_id = (SELECT id FROM roles WHERE name = $2)
+         WHERE id = $1`,
 		userID, role,
 	)
 	return err
 }
+
 
 /*** courses ***/
 
