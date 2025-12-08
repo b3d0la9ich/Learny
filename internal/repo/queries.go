@@ -33,7 +33,6 @@ func (r *Repo) CreateUser(ctx context.Context, email, passHash string) (int64, e
 	return id, row.Scan(&id)
 }
 
-
 func (r *Repo) FindUserByEmail(ctx context.Context, email string) (*UserRow, error) {
 	row := r.DB.QueryRowContext(ctx,
 		`SELECT u.id, u.email, u.pass_hash, r.name AS role
@@ -48,7 +47,6 @@ func (r *Repo) FindUserByEmail(ctx context.Context, email string) (*UserRow, err
 	}
 	return &u, nil
 }
-
 
 func (r *Repo) UpdateUserPass(ctx context.Context, userID int64, newHash string) error {
 	_, err := r.DB.ExecContext(ctx,
@@ -93,7 +91,6 @@ func (r *Repo) ListUsers(ctx context.Context) ([]UserRow, error) {
 	return out, rows.Err()
 }
 
-
 func (r *Repo) UpdateUserRole(ctx context.Context, userID int64, role string) error {
 	switch role {
 	case "student", "teacher", "admin":
@@ -109,7 +106,6 @@ func (r *Repo) UpdateUserRole(ctx context.Context, userID int64, role string) er
 	)
 	return err
 }
-
 
 /*** courses ***/
 
@@ -487,7 +483,6 @@ func (a AttemptRow) ScoreVal() float64 {
 	return *a.Score
 }
 
-
 func (r *Repo) ListAttemptsByCourse(ctx context.Context, courseID int64) ([]AttemptRow, error) {
 	rows, err := r.DB.QueryContext(ctx, `
 		SELECT a.id, u.email, qz.title, a.finished_at, a.total_score
@@ -679,7 +674,8 @@ type TopicStat struct {
 	Correct int
 }
 
-func (r *Repo) TopicStatsByUser(ctx context.Context, userID, courseID int64) ([]TopicStat, error) {
+// теперь считаем по ВСЕМ курсам пользователя
+func (r *Repo) TopicStatsByUser(ctx context.Context, userID int64) ([]TopicStat, error) {
 	rows, err := r.DB.QueryContext(ctx, `
 		SELECT q.topic,
 		       COUNT(*) AS total,
@@ -688,10 +684,10 @@ func (r *Repo) TopicStatsByUser(ctx context.Context, userID, courseID int64) ([]
 		JOIN attempts t ON t.id = a.attempt_id
 		JOIN questions q ON q.id = a.question_id
 		JOIN quizzes   z ON z.id = t.quiz_id
-		WHERE t.user_id=$1 AND z.course_id=$2
+		WHERE t.user_id=$1
 		GROUP BY q.topic
 		ORDER BY q.topic
-	`, userID, courseID)
+	`, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -714,17 +710,18 @@ type TopicDetailRow struct {
 	Correct *bool
 }
 
-func (r *Repo) TopicDetail(ctx context.Context, userID, courseID int64, topic string) ([]TopicDetailRow, error) {
+// тоже без фильтра по course_id — история по теме из всех курсов
+func (r *Repo) TopicDetail(ctx context.Context, userID int64, topic string) ([]TopicDetailRow, error) {
 	rows, err := r.DB.QueryContext(ctx, `
 		SELECT q.id, a.answered_at, a.is_correct
 		FROM answers a
 		JOIN attempts t ON t.id = a.attempt_id
 		JOIN questions q ON q.id = a.question_id
 		JOIN quizzes   z ON z.id = t.quiz_id
-		WHERE t.user_id=$1 AND z.course_id=$2 AND q.topic=$3
+		WHERE t.user_id=$1 AND q.topic=$2
 		ORDER BY a.answered_at DESC
 		LIMIT 200
-	`, userID, courseID, topic)
+	`, userID, topic)
 	if err != nil {
 		return nil, err
 	}

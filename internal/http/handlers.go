@@ -509,13 +509,30 @@ func (s *Server) handleQuizFinish(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = s.Repo.SetAttemptTiming(r.Context(), attemptID, dur, overtime)
 
-	s.render(w, r, "result", map[string]any{"AttemptID": attemptID, "Score": score})
+	// === считаем номер попытки для ЭТОГО квиза и ЭТОГО пользователя ===
+	uid, _ := a.CurrentUserID(r)
+	attemptNo := 0
+	if uid > 0 && quizID > 0 {
+		if n, err := s.Repo.TotalAttemptsByUserQuiz(r.Context(), uid, quizID); err == nil {
+			// n — количество попыток по этому квизу (включая текущую)
+			attemptNo = n
+		}
+	}
+
+	s.render(w, r, "result", map[string]any{
+		"AttemptID": attemptID, // глобальный ID на всякий случай
+		"AttemptNo": attemptNo, // номер попытки для этого квиза
+		"Score":     score,
+	})
 }
+
+/* ===== Темы ===== */
 
 func (s *Server) handleTopics(w http.ResponseWriter, r *http.Request) {
 	uid, _ := a.CurrentUserID(r)
-	courseID := int64(1)
-	stats, _ := s.Repo.TopicStatsByUser(r.Context(), uid, courseID)
+
+	// статистика по темам ТЕПЕРЬ по всем курсам пользователя
+	stats, _ := s.Repo.TopicStatsByUser(r.Context(), uid)
 
 	type Row struct {
 		Topic   string
@@ -536,7 +553,6 @@ func (s *Server) handleTopics(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleTopicProfile(w http.ResponseWriter, r *http.Request) {
 	uid, _ := a.CurrentUserID(r)
-	courseID := int64(1)
 
 	topic := strings.TrimSpace(r.URL.Query().Get("name"))
 	if topic == "" {
@@ -544,7 +560,8 @@ func (s *Server) handleTopicProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	detail, err := s.Repo.TopicDetail(r.Context(), uid, courseID, topic)
+	// история по теме тоже по всем курсам
+	detail, err := s.Repo.TopicDetail(r.Context(), uid, topic)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
