@@ -1,16 +1,17 @@
 package repo
 
 import (
-	"context"
-	"database/sql"
-	"encoding/csv"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"io"
-	"strconv"
-	"strings"
-	"time"
+    "bytes"
+    "context"
+    "database/sql"
+    "encoding/csv"
+    "encoding/json"
+    "errors"
+    "fmt"
+    "io"
+    "strconv"
+    "strings"
+    "time"
 )
 
 /*** users ***/
@@ -163,13 +164,71 @@ func (r *Repo) DeleteCourse(ctx context.Context, id int64) error {
 
 /*** quizzes & questions ***/
 
+/*** quizzes & questions ***/
+
+// QuizRules описывает правила квиза.
+// Поддерживает как старый формат (count/by_topics),
+// так и новый (count_* + min/max_difficulty).
 type QuizRules struct {
-	Count             int      `json:"count"`
-	ByTopics          []string `json:"by_topics"`
-	TimeLimitSec      int      `json:"time_limit_sec"`
-	MaxAttempts       int      `json:"max_attempts"`
-	RetakeCooldownSec int      `json:"retake_cooldown_sec"`
+	// старые поля
+	Count    int      `json:"count"`      // если >0 — общее количество вопросов
+	ByTopics []string `json:"by_topics"`  // пока не используется
+
+	// общие ограничения
+	TimeLimitSec      int `json:"time_limit_sec"`      // 0 = без ограничения
+	MaxAttempts       int `json:"max_attempts"`        // 0 = без лимита по попыткам
+	RetakeCooldownSec int `json:"retake_cooldown_sec"` // 0 = без кулдауна
+
+	// новый формат: количество по типам
+	CountSingle   int `json:"count_single"`
+	CountMultiple int `json:"count_multiple"`
+	CountNumeric  int `json:"count_numeric"`
+	CountText     int `json:"count_text"`
+
+	// новый формат: сложности
+	MinDifficulty int `json:"min_difficulty"`
+	MaxDifficulty int `json:"max_difficulty"`
 }
+
+// Validate проверяет, что правила не бредовые.
+// ВАЖНО: не запрещаем 0 в полях, это значит "нет ограничения".
+func (q *QuizRules) Validate() error {
+	if q.TimeLimitSec < 0 {
+		return errors.New("time_limit_sec не может быть отрицательным")
+	}
+	if q.MaxAttempts < 0 {
+		return errors.New("max_attempts не может быть отрицательным")
+	}
+	if q.RetakeCooldownSec < 0 {
+		return errors.New("retake_cooldown_sec не может быть отрицательным")
+	}
+
+	if q.Count < 0 {
+		return errors.New("count не может быть отрицательным")
+	}
+	if q.CountSingle < 0 || q.CountMultiple < 0 || q.CountNumeric < 0 || q.CountText < 0 {
+		return errors.New("количество вопросов по типам не может быть отрицательным")
+	}
+
+	// должен быть хотя бы какой-то положительный итоговый размер
+	total := q.Count
+	if total == 0 {
+		total = q.CountSingle + q.CountMultiple + q.CountNumeric + q.CountText
+	}
+	if total <= 0 {
+		return errors.New("нужно указать общее количество вопросов (count) или суммы по типам > 0")
+	}
+
+	if q.MinDifficulty < 0 || q.MaxDifficulty < 0 {
+		return errors.New("min_difficulty и max_difficulty не могут быть отрицательными")
+	}
+	if q.MinDifficulty > 0 && q.MaxDifficulty > 0 && q.MinDifficulty > q.MaxDifficulty {
+		return errors.New("min_difficulty не может быть больше max_difficulty")
+	}
+
+	return nil
+}
+
 
 type QuizRow struct {
 	ID    int64
@@ -222,16 +281,34 @@ func (r *Repo) ListQuizzesByCourse(ctx context.Context, courseID int64) ([]QuizR
 }
 
 func (r *Repo) CreateQuiz(ctx context.Context, courseID int64, title string, rulesRaw []byte) error {
-	var tmp map[string]any
-	if err := json.Unmarshal(rulesRaw, &tmp); err != nil {
-		return fmt.Errorf("invalid JSON in rules: %w", err)
+	if len(rulesRaw) == 0 {
+		return errors.New("правила квиза не могут быть пустыми")
 	}
+
+	var rules QuizRules
+
+	// Используем Decoder с DisallowUnknownFields,
+	// чтобы ловить опечатки в ключах (unknown field ...).
+	dec := json.NewDecoder(bytes.NewReader(rulesRaw))
+	dec.DisallowUnknownFields()
+
+	if err := dec.Decode(&rules); err != nil {
+		return fmt.Errorf("invalid JSON в rules: %w", err)
+	}
+
+	// Бизнес-валидация значений
+	if err := rules.Validate(); err != nil {
+		return err
+	}
+
+	// Сохраняем именно тот JSON, который ввёл админ
 	_, err := r.DB.ExecContext(ctx,
 		`INSERT INTO quizzes(course_id, title, rules) VALUES ($1,$2,$3)`,
 		courseID, title, rulesRaw,
 	)
 	return err
 }
+
 
 func (r *Repo) DeleteQuiz(ctx context.Context, quizID int64) error {
 	_, err := r.DB.ExecContext(ctx,
@@ -263,9 +340,14 @@ func toPGTextArray(a []string) string {
 }
 
 func (r *Repo) PickQuestions(ctx context.Context, courseID int64, rules *QuizRules) ([]QuestionRow, error) {
-	// берём количество из rules.Count, если 0 — 10
+	// считаем, сколько всего вопросов нужно
 	total := rules.Count
 	if total <= 0 {
+		// если Count не задан, пробуем сумму по типам
+		total = rules.CountSingle + rules.CountMultiple + rules.CountNumeric + rules.CountText
+	}
+	if total <= 0 {
+		// если вообще ничего не указано — дефолт
 		total = 10
 	}
 
@@ -294,8 +376,11 @@ func (r *Repo) PickQuestions(ctx context.Context, courseID int64, rules *QuizRul
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+
 	return out, nil
 }
+
+
 
 func (r *Repo) FetchQuestionsByIDs(ctx context.Context, ids []int64) ([]QuestionRow, error) {
 	if len(ids) == 0 {

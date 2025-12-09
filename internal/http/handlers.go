@@ -651,10 +651,15 @@ func (s *Server) handleAdminUploadJSON(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		cs, _ := s.Repo.ListCourses(r.Context())
 		s.render(w, r, "admin_upload_json", map[string]any{"Courses": cs})
+
 	case http.MethodPost:
 		cidStr := r.FormValue("course_id")
 		if cidStr == "" {
-			http.Error(w, "course_id required", 400)
+			cs, _ := s.Repo.ListCourses(r.Context())
+			s.render(w, r, "admin_upload_json", map[string]any{
+				"Courses": cs,
+				"Error":   "Нужно выбрать курс.",
+			})
 			return
 		}
 		courseID, _ := strconv.ParseInt(cidStr, 10, 64)
@@ -667,22 +672,50 @@ func (s *Server) handleAdminUploadJSON(w http.ResponseWriter, r *http.Request) {
 		} else {
 			raw = []byte(r.FormValue("json"))
 		}
-		if len(raw) == 0 {
-			http.Error(w, "empty JSON", 400)
+
+		// чтобы не потерять ввод
+		rawStr := strings.TrimSpace(string(raw))
+
+		if rawStr == "" {
+			cs, _ := s.Repo.ListCourses(r.Context())
+			s.render(w, r, "admin_upload_json", map[string]any{
+				"Courses":  cs,
+				"Selected": courseID,
+				"Error":    "JSON не должен быть пустым.",
+				"JsonRaw":  rawStr,
+			})
 			return
 		}
 
-		n, err := s.Repo.ImportQuestionsJSON(r.Context(), raw, courseID)
+		n, err := s.Repo.ImportQuestionsJSON(r.Context(), []byte(rawStr), courseID)
 		if err != nil {
-			http.Error(w, err.Error(), 400)
+			msg := err.Error()
+			if strings.Contains(msg, "cannot unmarshal object into Go value of type []") {
+				// типовая ошибка: засунули один объект вместо массива
+				msg = "Некорректный формат JSON: ожидается массив вопросов `[ ... ]`, а не один объект `{ ... }`."
+			}
+			cs, _ := s.Repo.ListCourses(r.Context())
+			s.render(w, r, "admin_upload_json", map[string]any{
+				"Courses":  cs,
+				"Selected": courseID,
+				"Error":    msg,
+				"JsonRaw":  rawStr,
+			})
 			return
 		}
 
 		cs, _ := s.Repo.ListCourses(r.Context())
 		s.render(w, r, "admin_upload_json",
-			map[string]any{"OK": true, "Count": n, "Courses": cs, "Selected": courseID})
+			map[string]any{
+				"OK":       true,
+				"Count":    n,
+				"Courses":  cs,
+				"Selected": courseID,
+			})
 	}
 }
+
+
 
 /* ===== Админ: пользователи/курсы/квизы/результаты ===== */
 
@@ -759,32 +792,61 @@ func (s *Server) handleAdminQuizzes(w http.ResponseWriter, r *http.Request) {
 		}
 		cs, _ := s.Repo.ListCourses(r.Context())
 		qs, _ := s.Repo.ListQuizzesByCourse(r.Context(), cid)
-		s.render(w, r, "admin_quizzes", map[string]any{"Courses": cs, "Selected": cid, "Quizzes": qs})
+		s.render(w, r, "admin_quizzes", map[string]any{
+			"Courses":  cs,
+			"Selected": cid,
+			"Quizzes":  qs,
+		})
+
 	case http.MethodPost:
 		if err := r.ParseForm(); err != nil {
-			http.Error(w, err.Error(), 400)
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 		action := r.FormValue("action")
+
 		switch action {
 		case "create":
 			cid, _ := strconv.ParseInt(r.FormValue("course_id"), 10, 64)
 			title := strings.TrimSpace(r.FormValue("title"))
 			rules := strings.TrimSpace(r.FormValue("rules_json"))
+
 			if title == "" || rules == "" {
-				http.Error(w, "title and rules_json required", 400)
+				cs, _ := s.Repo.ListCourses(r.Context())
+				qs, _ := s.Repo.ListQuizzesByCourse(r.Context(), cid)
+				s.render(w, r, "admin_quizzes", map[string]any{
+					"Courses":   cs,
+					"Selected":  cid,
+					"Quizzes":   qs,
+					"Error":     "Нужно заполнить название и JSON с правилами квиза.",
+					"FormTitle": title,
+					"FormRules": rules,
+				})
 				return
 			}
+
 			if err := s.Repo.CreateQuiz(r.Context(), cid, title, []byte(rules)); err != nil {
-				http.Error(w, err.Error(), 400)
+				// здесь уже либо "ошибка в JSON-правилах: ...", либо текст из Validate()
+				cs, _ := s.Repo.ListCourses(r.Context())
+				qs, _ := s.Repo.ListQuizzesByCourse(r.Context(), cid)
+				s.render(w, r, "admin_quizzes", map[string]any{
+					"Courses":   cs,
+					"Selected":  cid,
+					"Quizzes":   qs,
+					"Error":     err.Error(),
+					"FormTitle": title,
+					"FormRules": rules,
+				})
 				return
 			}
+
 			http.Redirect(w, r, "/admin/quizzes?course_id="+strconv.FormatInt(cid, 10), http.StatusSeeOther)
+
 		case "delete":
 			qid, _ := strconv.ParseInt(r.FormValue("quiz_id"), 10, 64)
 			cid, _ := strconv.ParseInt(r.FormValue("course_id"), 10, 64)
 			if err := s.Repo.DeleteQuiz(r.Context(), qid); err != nil {
-				http.Error(w, err.Error(), 400)
+				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
 			http.Redirect(w, r, "/admin/quizzes?course_id="+strconv.FormatInt(cid, 10), http.StatusSeeOther)

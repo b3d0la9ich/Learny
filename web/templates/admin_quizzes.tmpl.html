@@ -3,11 +3,23 @@
 {{ define "content" }}
 <h1>Квизы по курсу</h1>
 
-<form method="get" class="card" style="display:flex; gap:8px; align-items:center">
+{{/* TOAST-уведомление об ошибке */}}
+<div class="toast-container">
+  {{ if .Error }}
+    <div class="toast toast-error" id="quiz-toast-error">
+      <span class="toast-close" onclick="this.parentElement.classList.remove('show')">×</span>
+      {{ .Error }}
+    </div>
+  {{ end }}
+</div>
+
+<form method="get" class="card" style="display:flex; gap:8px; align-items:center; margin-top:16px;">
   <label>Курс
     <select name="course_id">
       {{ range .Courses }}
-        <option value="{{ .ID }}" {{ if eq $.Selected .ID }}selected{{ end }}>#{{ .ID }} — {{ .Title }}</option>
+        <option value="{{ .ID }}" {{ if eq $.Selected .ID }}selected{{ end }}>
+          #{{ .ID }} — {{ .Title }}
+        </option>
       {{ end }}
     </select>
   </label>
@@ -34,10 +46,31 @@
 <form method="post" class="card">
   <input type="hidden" name="action" value="create">
   <input type="hidden" name="course_id" value="{{ .Selected }}">
-  <label>Название <input type="text" name="title" required></label>
-  <label>Правила (JSON)
-    <textarea name="rules_json" rows="6" placeholder='{"count":10,"by_topics":["logic"],"time_limit_sec":300,"max_attempts":3,"retake_cooldown_sec":3600}' required></textarea>
+
+  <label>Название
+    <input type="text" name="title" value="{{ .FormTitle }}" required>
   </label>
+
+  <label>Правила (JSON)
+    <textarea name="rules_json" rows="10" required>{{ .FormRules }}</textarea>
+    <div class="muted">
+      Пример:
+      <code>{"time_limit_sec":600,"max_attempts":5,"retake_cooldown_sec":300,"count_single":4,"count_multiple":2,"count_numeric":1,"count_text":1,"min_difficulty":1,"max_difficulty":3}</code>
+    </div>
+  </label>
+
   <button type="submit">Создать</button>
 </form>
+
+<script>
+  (function () {
+    const t = document.getElementById('quiz-toast-error');
+    if (t) {
+      // чуть задержим, чтобы CSS успел примениться
+      setTimeout(() => t.classList.add('show'), 50);
+      // авто-скрытие
+      setTimeout(() => t.classList.remove('show'), 6000);
+    }
+  })();
+</script>
 {{ end }}

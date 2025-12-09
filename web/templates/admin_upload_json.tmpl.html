@@ -1,24 +1,72 @@
-{{ define "title" }}Импорт вопросов (JSON) — Learny{{ end }}
+{{ define "title" }}Админ: импорт вопросов (JSON) — Learny{{ end }}
 {{ template "base.tmpl.html" . }}
 {{ define "content" }}
-<h1>Импорт вопросов (JSON)</h1>
+<h1>Импорт вопросов из JSON</h1>
 
-{{ if .OK }}<p class="ok">Импортировано записей: {{ .Count }} в курс #{{ .Selected }}</p>{{ end }}
+{{/* TOAST-уведомления */}}
+<div class="toast-container">
+  {{ if .Error }}
+    <div class="toast toast-error" id="toast-error">
+      <span class="toast-close" onclick="this.parentElement.classList.remove('show')">×</span>
+      {{ .Error }}
+    </div>
+  {{ end }}
+  {{ if .OK }}
+    <div class="toast toast-success" id="toast-ok">
+      <span class="toast-close" onclick="this.parentElement.classList.remove('show')">×</span>
+      Импортировано {{ .Count }} вопросов.
+    </div>
+  {{ end }}
+</div>
 
-<form method="post" enctype="multipart/form-data" class="card">
-  <label>Курс
-    <select name="course_id" required>
-      {{ range .Courses }}
-        <option value="{{ .ID }}" {{ if eq $.Selected .ID }}selected{{ end }}>#{{ .ID }} — {{ .Title }}</option>
-      {{ end }}
-    </select>
-  </label>
-  <label>JSON-файл <input type="file" name="file" accept=".json"></label>
-  <label>или вставьте JSON</label>
-  <textarea name="json" rows="10" placeholder='[
-  {"topic":"logic","q_type":"single","difficulty":2,"payload":{"text":"(T∧F)∨T?","choices":["TRUE","FALSE"],"correct":[0]}},
-  {"topic":"algebra","q_type":"numeric","payload":{"text":"det([[1,2],[3,4]])","correct_value":-2}}
-]'></textarea>
-  <button type="submit">Импортировать</button>
+<form method="post" enctype="multipart/form-data" class="card" style="margin-top:16px">
+  <div style="display:flex; flex-direction:column; gap:12px">
+
+    <label>Курс
+      <select name="course_id" required>
+        {{ range .Courses }}
+          <option value="{{ .ID }}" {{ if eq $.Selected .ID }}selected{{ end }}>#{{ .ID }} — {{ .Title }}</option>
+        {{ end }}
+      </select>
+    </label>
+
+    <label>Файл JSON (опционально)
+      <input type="file" name="file" accept="application/json">
+      <div class="muted">Если файл не выбран, будет использовано содержимое текстового поля ниже.</div>
+    </label>
+
+    <label>JSON (масcив вопросов)
+      <textarea name="json" rows="12" placeholder='[
+  {
+    "topic": "логика",
+    "qtype": "single",
+    "difficulty": 1,
+    "payload_json": {
+      "text": "2+2 = ?",
+      "choices": ["3", "4", "5"],
+      "correct": [1]
+    }
+  }
+]' >{{ .JsonRaw }}</textarea>
+    </label>
+
+    <button type="submit">Импортировать</button>
+  </div>
 </form>
+
+<script>
+  (function () {
+    const errorToast = document.getElementById('toast-error');
+    const okToast = document.getElementById('toast-ok');
+
+    if (errorToast) {
+      setTimeout(() => errorToast.classList.add('show'), 50);
+      setTimeout(() => errorToast.classList.remove('show'), 6000);
+    }
+    if (okToast) {
+      setTimeout(() => okToast.classList.add('show'), 50);
+      setTimeout(() => okToast.classList.remove('show'), 4000);
+    }
+  })();
+</script>
 {{ end }}
